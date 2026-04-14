@@ -1,14 +1,12 @@
 "use client";
 
-// create an interface for the prompt template
-interface PromptTemplate {
-  name: string;
-  content: string;
-  inputs: string[];
-}
-
+import {
+  businessPromptTemplates,
+  type PromptTemplate,
+} from "@/utils/business-workspaces";
 import { createContext, useContext, useEffect, useState } from "react";
 
+// create an interface for the prompt template
 const PromptsContext = createContext<any>(null);
 
 export function usePrompts() {
@@ -29,11 +27,24 @@ export function PromptsProvider({ children }: { children: React.ReactNode }) {
 
   function updatePromptTemplate() {
     const storedPromptsString = localStorage.getItem("prompts");
+    let storedPrompts: PromptTemplate[] = [];
 
-    if (storedPromptsString) {
-      const storedPrompts = JSON.parse(storedPromptsString);
-      setPromptTemplate(storedPrompts);
+    try {
+      storedPrompts = storedPromptsString
+        ? (JSON.parse(storedPromptsString) as PromptTemplate[])
+        : [];
+    } catch {
+      storedPrompts = [];
     }
+
+    const promptByName = new Map<string, PromptTemplate>();
+    for (const prompt of [...businessPromptTemplates, ...storedPrompts]) {
+      promptByName.set(prompt.name, prompt);
+    }
+
+    const mergedPrompts = [...promptByName.values()];
+    setPromptTemplate(mergedPrompts);
+    localStorage.setItem("prompts", JSON.stringify(mergedPrompts));
   }
 
   function addPromptTemplate(prompt: {

@@ -20,7 +20,6 @@ export default function ExpandingTextInput({
   expand = true,
   className,
 }: Props) {
-  
   useEffect(() => {
     if (expand && textareaRef && textareaRef.current) {
       textareaRef.current.style.height = "inherit";
@@ -29,7 +28,7 @@ export default function ExpandingTextInput({
         textareaRef?.current?.scrollHeight > 200 ? "auto" : "hidden"
       }`;
     }
-  }, [value]);
+  }, [expand, value]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

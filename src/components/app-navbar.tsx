@@ -11,6 +11,7 @@ type Props = {
   availableModels: any[];
   setActiveModel: Function;
   setOllama: Function;
+  workspaceLabel: string;
 };
 
 export default function AppNavbar({
@@ -20,6 +21,7 @@ export default function AppNavbar({
   availableModels,
   setActiveModel,
   setOllama,
+  workspaceLabel,
 }: Props) {
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -56,6 +58,8 @@ export default function AppNavbar({
   }, [isShareMenuOpen, isProfileMenuOpen]);
 
   function toggleModel() {
+    if (availableModels.length === 0) return;
+
     const i =
       (availableModels.findIndex((x) => x.name == activeModel) + 1) %
       availableModels.length;
@@ -75,22 +79,26 @@ export default function AppNavbar({
 
   return (
     <>
-      <nav className="sticky left-0 top-0 z-20 w-full border-b border-white/10 bg-black">
-        <div className="mx-auto flex flex-wrap items-center justify-between px-20 py-2.5">
-          <div className="flex space-x-8">
+      <nav className="sticky left-0 top-0 z-20 w-full border-b border-white/10 bg-[#050505]/90 backdrop-blur-xl">
+        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-8">
+          <div className="flex items-center gap-4">
+            <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/40">
+              {workspaceLabel}
+            </div>
             <input
-              className="w-64 ring-none flex cursor-text items-center gap-x-2 rounded-md border-transparent bg-transparent px-2 py-1 text-xs font-medium text-white outline-none placeholder:text-white/80 hover:bg-white/10 "
-              placeholder="Untitled"
+              className="ring-none flex w-52 cursor-text items-center gap-x-2 rounded-md border-transparent bg-transparent px-2 py-1 text-xs font-medium text-white outline-none placeholder:text-white/50 hover:bg-white/10 sm:w-72"
+              placeholder="New local session"
               value={documentName}
               onChange={handleInputChange}
             ></input>
           </div>
           <button
-            className="cursor-pointer text-xs text-white transition-colors hover:bg-white/10 rounded-md px-2 py-1"
+            className="cursor-pointer rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70 transition-colors hover:bg-white/10 hover:text-white"
             contentEditable={false}
             onClick={toggleModel}
+            type="button"
           >
-            {activeModel}
+            {activeModel || "Connect Ollama"}
           </button>
         </div>
       </nav>

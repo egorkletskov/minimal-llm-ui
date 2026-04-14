@@ -2,10 +2,8 @@
 
 import { usePrompts } from "@/app/context/PromptContext";
 import { useEffect, useRef, useState } from "react";
-import ExpandingTextInput from "./expanding-text-input";
 import { RightChevron } from "./icons/right-chevron";
 import React from "react";
-import { on } from "events";
 
 type Props = {
   expand?: boolean;
@@ -85,7 +83,7 @@ export default function CommandTextInput({
         }),
       ]);
     }
-  }, [inputValues]);
+  }, [initResultArray, inputValues]);
 
   function triggerResize() {
     if (expand && commandRef && commandRef.current) {

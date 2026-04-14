@@ -1,5 +1,6 @@
 "use client";
 import AppNavbar from "@/components/app-navbar";
+import BusinessWorkspacePanel from "@/components/business-workspace-panel";
 import CommandMenu from "@/components/command-menu";
 import CommandTextInput from "@/components/command-text-input";
 import ExpandingTextInput from "@/components/expanding-text-input";
@@ -11,6 +12,12 @@ import Sidebar from "@/components/sidebar";
 import { cn } from "@/utils/cn";
 import { baseUrl, fallbackModel } from "@/utils/constants";
 import generateRandomString from "@/utils/generateRandomString";
+import {
+  type BusinessPrompt,
+  type BusinessWorkspaceId,
+  businessWorkspaces,
+  getBusinessWorkspace,
+} from "@/utils/business-workspaces";
 import { useCycle } from "framer-motion";
 import { ChatOllama } from "langchain/chat_models/ollama";
 import { AIMessage, HumanMessage } from "langchain/schema";
@@ -40,8 +47,11 @@ export default function Home() {
     { title: string; filePath: string }[]
   >([]);
   const [activeConversation, setActiveConversation] = useState<string>("");
+  const [activeWorkspaceId, setActiveWorkspaceId] =
+    useState<BusinessWorkspaceId>("support-ops");
   const [menuState, toggleMenuState] = useCycle(false, true);
   const msgContainerRef = useRef<HTMLDivElement>(null);
+  const activeWorkspace = getBusinessWorkspace(activeWorkspaceId);
 
   useEffect(() => {
     scrollToBottom();
@@ -59,15 +69,17 @@ export default function Home() {
     fetch(`${baseUrl}/api/tags`)
       .then((response) => response.json())
       .then((data) => {
-        // console.log(data);
-        setAvailableModels(data.models);
+        const models = Array.isArray(data.models) ? data.models : [];
+        setAvailableModels(models);
+
+        if (models.length === 0) return;
 
         // get initial model from local storage
         const storedModel = localStorage.getItem("initialLocalLM");
         if (
           storedModel &&
           storedModel !== "" &&
-          data.models.findIndex(
+          models.findIndex(
             (m: { name: string }) =>
               m.name.toLowerCase() === storedModel.toLowerCase(),
           ) > -1
@@ -80,14 +92,32 @@ export default function Home() {
           setOllama(newOllama);
         } else {
           // set initial model to first model in list
-          setActiveModel(data.models[0]?.name);
+          setActiveModel(models[0]?.name);
           const initOllama = new ChatOllama({
             baseUrl: baseUrl,
-            model: data.models[0]?.name,
+            model: models[0]?.name,
           });
           setOllama(initOllama);
         }
-      });
+      })
+      .catch(() => setAvailableModels([]));
+  }
+
+  function applyBusinessPrompt(prompt: BusinessPrompt) {
+    setActivePromptTemplate(undefined);
+    setNewPrompt(prompt.prompt);
+  }
+
+  function selectBusinessWorkspace(workspaceId: BusinessWorkspaceId) {
+    const isPromptPackDraft = businessWorkspaces.some((workspace) =>
+      workspace.prompts.some((prompt) => prompt.prompt === newPrompt),
+    );
+
+    if (isPromptPackDraft) {
+      setNewPrompt("");
+    }
+
+    setActiveWorkspaceId(workspaceId);
   }
 
   async function getExistingConvos() {
@@ -247,7 +277,8 @@ export default function Home() {
   function getName(input: string) {
     const nameOllama = new ChatOllama({
       baseUrl: baseUrl,
-      model: activeModel && activeModel.trim() !== "" ? activeModel : fallbackModel,
+      model:
+        activeModel && activeModel.trim() !== "" ? activeModel : fallbackModel,
       verbose: false,
     });
     return nameOllama!
@@ -259,7 +290,8 @@ export default function Home() {
   }
 
   return (
-    <main className="relative flex max-h-screen min-h-screen w-screen max-w-[100vw] items-center justify-between overflow-hidden">
+    <main className="relative flex max-h-screen min-h-screen w-screen max-w-[100vw] items-center justify-between overflow-hidden bg-[#050505]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(34,211,238,0.12),transparent_28%),radial-gradient(circle_at_78%_16%,rgba(245,158,11,0.10),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_42%)]" />
       <Sidebar
         activeConversation={activeConversation}
         conversations={conversations}
@@ -270,10 +302,7 @@ export default function Home() {
         setNewPrompt={setNewPrompt}
         toggleMenuState={toggleMenuState}
       />
-      <div
-        className="flex max-h-screen min-h-screen w-full flex-col"
-        style={{ maxWidth: "calc(100vw - " + (menuState ? 20 : 0) + "rem)" }}
-      >
+      <div className="relative flex min-w-0 flex-1 flex-col">
         <AppNavbar
           documentName={activeConversation}
           setDocumentName={() => {}}
@@ -281,13 +310,65 @@ export default function Home() {
           availableModels={availableModels}
           setActiveModel={setActiveModel}
           setOllama={setOllama}
+          workspaceLabel={activeWorkspace.label}
         />
+        <div className="border-b border-white/10 px-4 py-3 xl:hidden">
+          <div className="flex gap-2 overflow-x-auto">
+            {businessWorkspaces.map((workspace) => (
+              <button
+                className={cn(
+                  "text-white/55 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs",
+                  activeWorkspace.id === workspace.id &&
+                    "border-cyan-300/40 bg-cyan-300/10 text-cyan-100",
+                )}
+                key={workspace.id}
+                onClick={() => selectBusinessWorkspace(workspace.id)}
+                type="button"
+              >
+                {workspace.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex w-full flex-1 flex-shrink flex-col items-center justify-end gap-y-4 overflow-hidden whitespace-break-spaces">
           <div className="flex w-full flex-1 flex-col items-center justify-end gap-y-4 overflow-scroll whitespace-break-spaces">
             <div
               ref={msgContainerRef}
-              className="block h-fit w-full flex-col items-center justify-center gap-y-1 overflow-scroll rounded-md p-2"
+              className="block h-fit w-full flex-col items-center justify-center gap-y-1 overflow-scroll rounded-md p-4"
             >
+              {messages.length === 0 && (
+                <div className="mx-auto flex min-h-[calc(100vh-16rem)] w-full max-w-5xl flex-col justify-center">
+                  <div className="max-w-3xl">
+                    <p className="mb-4 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.26em] text-cyan-100">
+                      {activeWorkspace.label}
+                    </p>
+                    <h1 className="text-balance text-5xl font-semibold tracking-[-0.06em] text-white md:text-7xl">
+                      {activeWorkspace.title}
+                    </h1>
+                    <p className="text-white/52 mt-5 max-w-2xl text-base leading-7">
+                      {activeWorkspace.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="mt-8 grid gap-3 md:grid-cols-3">
+                    {activeWorkspace.prompts.map((prompt) => (
+                      <button
+                        className="group rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 text-left shadow-2xl shadow-black/20 transition hover:-translate-y-1 hover:border-white/25 hover:bg-white/[0.075]"
+                        key={prompt.title}
+                        onClick={() => applyBusinessPrompt(prompt)}
+                        type="button"
+                      >
+                        <span className="text-sm font-semibold text-white">
+                          {prompt.title}
+                        </span>
+                        <span className="text-white/45 group-hover:text-white/65 mt-2 block text-xs leading-5">
+                          {prompt.intent}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {messages.map((msg) => (
                 <div
                   key={"message-" + msg.id}
@@ -411,12 +492,18 @@ export default function Home() {
                   }
                 }}
                 value={newPrompt}
-                placeholder="Send a message"
+                placeholder={`Ask ${activeWorkspace.label.toLowerCase()} to analyze something...`}
               />
             )}
           </div>
         </div>
       </div>
+      <BusinessWorkspacePanel
+        activeModel={activeModel}
+        activeWorkspace={activeWorkspace}
+        onSelectWorkspace={selectBusinessWorkspace}
+        onUsePrompt={applyBusinessPrompt}
+      />
     </main>
   );
 }

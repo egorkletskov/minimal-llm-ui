@@ -9,50 +9,51 @@ type Props = {
 
 export default function CommandMenu({ showMenu, filterString }: Props) {
   const { promptTemplate, setActivePromptTemplate } = usePrompts();
+  const filteredTemplates = promptTemplate.filter(
+    (template: { name: string }) =>
+      template.name.toLowerCase().includes(filterString.toLowerCase()),
+  );
 
   return (
     <>
       {showMenu && (
-        <motion.div className="flex flex-col rounded-md border border-[#191919] bg-[#0a0a0a]/80 p-2 text-sm font-normal text-white">
-          <div className="px-5 py-1 text-xs font-bold text-white/50">
-            Command Menu
+        <motion.div className="flex max-h-72 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-[#070707]/95 p-2 text-sm font-normal text-white shadow-2xl shadow-black/40 backdrop-blur-xl">
+          <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-[0.24em] text-white/40">
+            Prompt Packs
           </div>
-            {promptTemplate.map(
+          {filteredTemplates.map(
             (t: { name: string; content: string; inputs: string[] }) => (
-            // TODO: ADD BUTTONS THAT LET YOU DELETE | EDIT TEMPLATES
-            <>
-            {t.name.toLowerCase().indexOf(filterString) > -1 && (
-            <motion.div
-            onClick={() => setActivePromptTemplate(t)}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            layout
-            layoutId={t.name}
-            key={t.name}
-            className="cursor-pointer px-5 py-1 hover:bg-white/[0.03]"
-            >
-            {t.name} -{" "}
-    <div className="inline-flex gap-x-1">
-    {t.inputs?.map((i: string) => (
-    <span
-      className="rounded-md bg-white/10 px-1 py-0.5 text-xs"
-      key={t + "-" + i}
-    >
-      {i.slice(5)}
-    </span>
-    ))}
-    </div> -{" "}
-    {t.content.length < 100
-    ? t.content
-    : t.content.slice(0, 45) + "..." + t.content.slice(-45)}
-    </motion.div>
-    )}
+              <motion.div
+                animate={{ opacity: 1, height: "auto" }}
+                className="cursor-pointer rounded-xl px-4 py-3 transition hover:bg-white/[0.06]"
+                exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, height: 0 }}
+                key={t.name}
+                layout
+                layoutId={t.name}
+                onClick={() => setActivePromptTemplate(t)}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-medium text-white">{t.name}</span>
+                  <div className="inline-flex gap-x-1">
+                    {t.inputs?.map((input: string) => (
+                      <span
+                        className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] text-white/60"
+                        key={t.name + "-" + input}
+                      >
+                        {input.slice(5)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-white/45 mt-1 line-clamp-2 text-xs leading-5">
+                  {t.content}
+                </p>
+              </motion.div>
+            ),
+          )}
+        </motion.div>
+      )}
     </>
-    ),
-    )}
-    </motion.div>
-    )}
-    </>
-    );
-    }
+  );
+}
